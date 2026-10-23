@@ -1,0 +1,25 @@
+[
+    {
+        "items": [
+            {
+                "name": "Mie Nampol",
+                "id": 0,
+                "jumlah": 2,
+                "price": 10000,
+                "total": 20000
+            },
+            {
+                "name": "Mie Dower",
+                "id": 1,
+                "jumlah": 3,
+                "price": 12000,
+                "total": 36000
+            }
+        ],
+        "total": 56000,
+        "bayar": 70000,
+        "kembalian": 14000,
+        "tanggalOrder": "10/23/2026",
+        "jamOrder": "10:07:46 AM"
+    }
+]
