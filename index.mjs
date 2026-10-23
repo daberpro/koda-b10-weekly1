@@ -1,65 +1,44 @@
 import { getInput } from "./lib/input.mjs";
 import { observer } from "./lib/observer.mjs";
+import { writeFileJson, readFileJson } from "./lib/presistenceData.mjs";
 
+const MENU_FILE_PATH = "./data/menu.json";
+const HISTORY_FILE_PATH = "./data/history.json";
 const MAX_TEXT_SHOW_LENGTH = 20;
-const menus = [
-    {
-        id: 0,
-        name: "Mie Nampol",
-        price: 10000,
-        total_available: 10
-    },
-    {
-        id: 1,
-        name: "Mie Dower",
-        price: 12000,
-        total_available: 10
-    },
-    {
-        id: 2,
-        name: "Mie Mercon",
-        price: 10000,
-        total_available: 10
-    },
-    {
-        id: 3,
-        name: "Mie Jebew",
-        price: 12000,
-        total_available: 10
-    },
-    {
-        id: 4,
-        name: "Dimsum Ayam",
-        price: 12000,
-        total_available: 10
-    },
-    {
-        id: 5,
-        name: "Ayam Keju",
-        price: 13000,
-        total_available: 10
-    },
-    {
-        id: 6,
-        name: "Pangsit Besar",
-        price: 6000,
-        total_available: 10
-    },
-    {
-        id: 7,
-        name: "Pangsit Kecil",
-        price: 6000,
-        total_available: 10
-    },
-    {
-        id: 8,
-        name: "Ayam kribo",
-        price: 12000,
-        total_available: 10
-    }
-];
 const keranjang = new Map();
-const history = [];
+let menus = [];
+let history = [];
+
+observer.register("update-presistence-data", async (history)=> {
+    
+    const success = await writeFileJson(HISTORY_FILE_PATH, JSON.stringify(history));
+    if(!success){
+        console.log("[Error] Gagal mengupdate data presistence!");
+        return;
+    }
+
+    console.log("Data presistence berhasil di update");
+
+});
+
+observer.register("initialize", async ()=>{
+    const menuFromFile = await readFileJson(MENU_FILE_PATH);
+    if(!(menuFromFile && Array.isArray(menuFromFile))){
+        console.log(`[Error] tidak bisa membaca isi file menu: ${MENU_FILE_PATH}`);
+        return false;
+    }
+    
+    const historyFromFile = await readFileJson(HISTORY_FILE_PATH);
+    if(!(historyFromFile && Array.isArray(historyFromFile))){
+        console.log(`[Error] tidak bisa membaca isi file history: ${HISTORY_FILE_PATH}`);
+        return false;
+    }
+
+    history = historyFromFile;
+    menus = menuFromFile;
+
+    return true;
+});
 
 observer.register("history", async () => {
     if (history.length === 0) {
@@ -80,17 +59,17 @@ observer.register("history", async () => {
     );
     console.log("-".repeat(MAX_TEXT_SHOW_LENGTH * 6 + 38));
     let i = 1;
-    for (let { items, total, bayar, kembalian, tanggal_order, jam_order } of history) {
+    for (let { items, total, bayar, kembalian, tanggalOrder, jamOrder } of history) {
 
-        const first_item = items.at(0);
+        const firstItem = items.at(0);
         console.log(
             `|${i.toString().padEnd(MAX_TEXT_SHOW_LENGTH)}`
-            + `|${`"${first_item.name}" ${first_item.jumlah} ${first_item.price} ${first_item.total}`.padEnd(30)}`
+            + `|${`"${firstItem.name}" ${firstItem.jumlah} ${firstItem.price} ${firstItem.total}`.padEnd(30)}`
             + `|${total.toString().padEnd(MAX_TEXT_SHOW_LENGTH)}`
             + `|${bayar.toString().padEnd(MAX_TEXT_SHOW_LENGTH)}`
             + `|${kembalian.toString().padEnd(MAX_TEXT_SHOW_LENGTH)}`
-            + `|${tanggal_order.padEnd(MAX_TEXT_SHOW_LENGTH)}`
-            + `|${jam_order.padEnd(MAX_TEXT_SHOW_LENGTH)}|`
+            + `|${tanggalOrder.padEnd(MAX_TEXT_SHOW_LENGTH)}`
+            + `|${jamOrder.padEnd(MAX_TEXT_SHOW_LENGTH)}|`
         );
         if (items.length > 1) {
             items.forEach((item, index) => {
@@ -121,12 +100,12 @@ observer.register("checkout", async () => {
         return;
     }
 
-    const array_of_keranjang = [...keranjang.values()];
-    const total_sub_items = array_of_keranjang.map((d) => {
+    const arrayOfKeranjang = [...keranjang.values()];
+    const totalSubItems = arrayOfKeranjang.map((d) => {
         d.total = d.jumlah * d.price;
         return d;
     });
-    const total = array_of_keranjang
+    const total = arrayOfKeranjang
         .reduce(
             (accum, item) => accum + item.jumlah * item.price, 0
         );
@@ -135,7 +114,7 @@ observer.register("checkout", async () => {
     console.log("-".repeat(MAX_TEXT_SHOW_LENGTH * 4 + 5));
     console.log(`${"Menu".padStart(MAX_TEXT_SHOW_LENGTH)} ${"Jumlah".padStart(MAX_TEXT_SHOW_LENGTH)} ${"Harga Satuan".padStart(MAX_TEXT_SHOW_LENGTH)} ${"Total".padStart(MAX_TEXT_SHOW_LENGTH)}`);
     console.log("-".repeat(MAX_TEXT_SHOW_LENGTH * 4 + 5));
-    for (let { name, jumlah, price, total } of total_sub_items) {
+    for (let { name, jumlah, price, total } of totalSubItems) {
         console.log(`${name.toString().padStart(MAX_TEXT_SHOW_LENGTH)} ${jumlah.toString().padStart(MAX_TEXT_SHOW_LENGTH)} ${price.toString().padStart(MAX_TEXT_SHOW_LENGTH)} ${total.toString().padStart(MAX_TEXT_SHOW_LENGTH)}`);
     }
     console.log("-".repeat(MAX_TEXT_SHOW_LENGTH * 4 + 5));
@@ -164,21 +143,22 @@ observer.register("checkout", async () => {
     keranjang.clear();
     history.push(
         {
-            items: array_of_keranjang,
+            items: arrayOfKeranjang,
             total,
             bayar,
             kembalian,
-            tanggal_order: (new Date()).toLocaleDateString(),
-            jam_order: (new Date()).toLocaleTimeString()
+            tanggalOrder: (new Date()).toLocaleDateString(),
+            jamOrder: (new Date()).toLocaleTimeString()
         }
     );
 
+    await observer.emit("update-presistence-data", history);
     await observer.emit("tampilkan-opsi");
 
 });
 
 observer.register("tambahkan-menu-ke-keranjang", async (menu) => {
-    console.log(`\nNama menu : ${menu.name}, harga: ${menu.price}, jumlah ketersediaan: ${menu.total_available}`);
+    console.log(`\nNama menu : ${menu.name}, harga: ${menu.price}, jumlah ketersediaan: ${menu.totalAvailable}`);
     if (keranjang.has(menu.id)) {
         console.log(`jumlah menu yang sudah ditambahkan kekeranjang: ${keranjang.get(menu.id).jumlah}`);
     }
@@ -187,21 +167,21 @@ observer.register("tambahkan-menu-ke-keranjang", async (menu) => {
     c. Untuk membatalkan
 `
     );
-    const input = await getInput(`Masukan jumlah menu yang ingin dipesan atau opsi yang ingin dilakukan: `);
+    const input = await getInput("Masukan jumlah menu yang ingin dipesan atau opsi yang ingin dilakukan: ");
     switch (input.trim()) {
         case "c": {
             await observer.emit("tampilkan-menu");
             break;
         }
         default: {
-            const jumlah_menu = Number.parseInt(input);
-            if (Number.isNaN(jumlah_menu) || jumlah_menu <= 0) {
+            const jumlahMenu = Number.parseInt(input);
+            if (Number.isNaN(jumlahMenu) || jumlahMenu <= 0) {
                 console.log(`Mohon masukan input yang sesuai!, input yang anda masukan "${input}"`);
                 await observer.emit("tambahkan-menu-ke-keranjang", menu);
                 return;
             }
 
-            if (jumlah_menu > menu.total_available) {
+            if (jumlahMenu > menu.totalAvailable) {
                 console.log("Maaf jumlah yang anda pesan melebihi jumlah yang tersedia");
                 await observer.emit("tambahkan-menu-ke-keranjang", menu);
                 return;
@@ -209,26 +189,26 @@ observer.register("tambahkan-menu-ke-keranjang", async (menu) => {
 
             if (keranjang.has(menu.id)) {
                 const k = keranjang.get(menu.id);
-                const selisih_jumlah = k.jumlah - jumlah_menu;
-                menu.total_available += selisih_jumlah;
+                const selisihJumlah = k.jumlah - jumlahMenu;
+                menu.totalAvailable += selisihJumlah;
 
-                console.log(`mengubah jumlah "${k.name}" di keranjang dari ${k.jumlah} ke ${jumlah_menu}`);
-                k.jumlah = jumlah_menu;
+                console.log(`mengubah jumlah "${k.name}" di keranjang dari ${k.jumlah} ke ${jumlahMenu}`);
+                k.jumlah = jumlahMenu;
                 await observer.emit("tampilkan-menu", menu);
                 return;
             }
 
-            menu.total_available -= jumlah_menu;
+            menu.totalAvailable -= jumlahMenu;
             keranjang.set(
                 menu.id,
                 {
                     name: menu.name,
                     id: menu.id,
-                    jumlah: jumlah_menu,
+                    jumlah: jumlahMenu,
                     price: menu.price
                 }
             );
-            console.log(`menambahkan menu "${menu.name}" sebanyak ${jumlah_menu} ke keranjang`);
+            console.log(`menambahkan menu "${menu.name}" sebanyak ${jumlahMenu} ke keranjang`);
             await observer.emit("tampilkan-menu");
 
         }
@@ -237,24 +217,24 @@ observer.register("tambahkan-menu-ke-keranjang", async (menu) => {
 
 observer.register("ambil-menu", async () => {
     const input = await getInput(`Masukan pilihan dari 0 - ${menus.length + 1}: `);
-    const menu_idx = Number.parseInt(input);
-    if (Number.isNaN(menu_idx) || menu_idx < 0 || menu_idx > menus.length + 1) {
+    const menuIdx = Number.parseInt(input);
+    if (Number.isNaN(menuIdx) || menuIdx < 0 || menuIdx > menus.length + 1) {
         console.log(`Mohon masukan input yang sesuai!, input yang anda masukan "${input}"`);
         await observer.emit("tampilkan-menu");
         return;
     }
 
-    if (menu_idx === 0) {
+    if (menuIdx === 0) {
         observer.emit("tampilkan-opsi");
         return;
     }
 
-    if (menu_idx === menus.length + 1) {
+    if (menuIdx === menus.length + 1) {
         observer.emit("checkout");
         return;
     }
 
-    await observer.emit("tambahkan-menu-ke-keranjang", menus[menu_idx - 1]);
+    await observer.emit("tambahkan-menu-ke-keranjang", menus[menuIdx - 1]);
 
 });
 
@@ -298,7 +278,7 @@ observer.register("tampilkan-menu", async () => {
             `|${(i + 1).toString().padEnd(MAX_TEXT_SHOW_LENGTH)}`
             + `|${data.name.padEnd(MAX_TEXT_SHOW_LENGTH)}`
             + `|${data.price.toString().padEnd(MAX_TEXT_SHOW_LENGTH)}`
-            + `|${data.total_available.toString().padEnd(MAX_TEXT_SHOW_LENGTH)}|`
+            + `|${data.totalAvailable.toString().padEnd(MAX_TEXT_SHOW_LENGTH)}|`
         );
     });
     console.log("-".repeat(MAX_TEXT_SHOW_LENGTH * 4 + 5));
@@ -338,6 +318,11 @@ observer.register("tampilkan-menu", async () => {
 });
 
 observer.register("tampilkan-opsi", async () => {
+    const init = await observer.emit("initialize");
+    if(!init){
+        return;
+    }
+
     console.log(
         `MIELEPAR CLI ORDER
 Opsi:
