@@ -1,0 +1,29 @@
+{
+  "name": "koda-b10-weekly1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.mjs",
+  "scripts": {
+    "dev": "node index.mjs",
+    "lint": "eslint **/*.mjs",
+    "lint:fix": "eslint **/*.mjs --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daberpro/koda-b10-weekly1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/daberpro/koda-b10-weekly1/issues"
+  },
+  "homepage": "https://github.com/daberpro/koda-b10-weekly1#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0"
+  }
+}
