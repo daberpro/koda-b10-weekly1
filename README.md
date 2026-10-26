@@ -1,6 +1,7 @@
 # Koda B10 Weekly 1
 
 Project ini merupakan latihan mingguan pertama untuk program Koda B10. Repositori ini dibuat menggunakan JavaScript dan ditujukan untuk mempelajari dasar-dasar pengembangan aplikasi dengan bahasa pemrograman JavaScript.
+aplikasi yang dibuat berbentuk cli denga mengintegrasikan POS (point of sale) dummy dari objek yang ada di dunia nyata
 
 ## Teknologi yang Digunakan
 - JavaScript
