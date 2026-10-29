@@ -3,15 +3,16 @@ import { observer } from "../lib/observer.mjs";
 import { writeFileJson, readFileJson } from "../lib/presistenceData.mjs";
 import { constant } from "./constant.mjs";
 import { showMenus, showHistory, showCheckoutItems } from "../lib/cliOutputs.mjs";
-let { HISTORY_FILE_PATH, MENU_FILE_PATH } = constant;
+import { createInvoiceId } from "../utils/generator.mjs";
 
+let { historyFilePath, menuFilePath } = constant;
 let keranjang = new Map();
 let menus = [];
 let history = [];
 
 observer.register("update-presistence-data", async (history)=> {
     
-    const success = await writeFileJson(HISTORY_FILE_PATH, JSON.stringify(history));
+    const success = await writeFileJson(historyFilePath, JSON.stringify(history));
     if(!success){
         console.log("[Error] Gagal mengupdate data presistence!");
         return;
@@ -22,15 +23,15 @@ observer.register("update-presistence-data", async (history)=> {
 });
 
 observer.register("initialize", async ()=>{
-    const menuFromFile = await readFileJson(MENU_FILE_PATH);
+    const menuFromFile = await readFileJson(menuFilePath);
     if(!(menuFromFile && Array.isArray(menuFromFile))){
-        console.log(`[Error] tidak bisa membaca isi file menu: ${MENU_FILE_PATH}`);
+        console.log(`[Error] tidak bisa membaca isi file menu: ${menuFilePath}`);
         return false;
     }
     
-    const historyFromFile = await readFileJson(HISTORY_FILE_PATH);
+    const historyFromFile = await readFileJson(historyFilePath);
     if(!(historyFromFile && Array.isArray(historyFromFile))){
-        console.log(`[Error] tidak bisa membaca isi file history: ${HISTORY_FILE_PATH}`);
+        console.log(`[Error] tidak bisa membaca isi file history: ${historyFilePath}`);
         return false;
     }
 
@@ -86,6 +87,10 @@ observer.register("checkout", async () => {
         console.log(`Kembalian: ${kembalian}`);
     }
 
+    const currentDate = new Date();
+    const tanggalFrmt = `${currentDate.getDay() + 1}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+    const uniqueId = Date.now();
+
     keranjang.clear();
     history.push(
         {
@@ -93,8 +98,9 @@ observer.register("checkout", async () => {
             total,
             bayar,
             kembalian,
-            tanggalOrder: (new Date()).toLocaleDateString(),
-            jamOrder: (new Date()).toLocaleTimeString()
+            tanggalOrder: currentDate.toLocaleDateString(),
+            jamOrder: currentDate.toLocaleTimeString(),
+            id: createInvoiceId(tanggalFrmt, uniqueId)
         }
     );
 
@@ -113,7 +119,7 @@ observer.register("tambahkan-menu-ke-keranjang", async (menu) => {
     c. Untuk membatalkan
 `
     );
-    const input = await getInput("Masukan jumlah menu yang ingin dipesan atau opsi yang ingin dilakukan: ");
+    const input = await getInput("Masukan jumlah menu yang ingin dipesan atau opsi yang ingin dilakukan,\nmasukan 0 untuk menghapus menu dari keranjang: ");
     switch (input.trim()) {
         case "c": {
             await observer.emit("tampilkan-menu");
@@ -121,7 +127,7 @@ observer.register("tambahkan-menu-ke-keranjang", async (menu) => {
         }
         default: {
             const jumlahMenu = Number.parseInt(input);
-            if (Number.isNaN(jumlahMenu) || jumlahMenu <= 0) {
+            if (Number.isNaN(jumlahMenu) || jumlahMenu < 0) {
                 console.log(`Mohon masukan input yang sesuai!, input yang anda masukan "${input}"`);
                 await observer.emit("tambahkan-menu-ke-keranjang", menu);
                 return;
@@ -134,14 +140,21 @@ observer.register("tambahkan-menu-ke-keranjang", async (menu) => {
             }
 
             if (keranjang.has(menu.id)) {
+                
                 const k = keranjang.get(menu.id);
                 const selisihJumlah = k.jumlah - jumlahMenu;
                 menu.totalAvailable += selisihJumlah;
 
+                if(jumlahMenu === 0){
+                    keranjang.delete(menu.id);
+                }
+                
                 console.log(`mengubah jumlah "${k.name}" di keranjang dari ${k.jumlah} ke ${jumlahMenu}`);
                 k.jumlah = jumlahMenu;
                 await observer.emit("tampilkan-menu", menu);
+                
                 return;
+            
             }
 
             menu.totalAvailable -= jumlahMenu;
